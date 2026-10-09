@@ -1,4 +1,6 @@
-﻿# SNN image compression with an enforced encoder / decoder split
+**English** | [简体中文](README.zh-CN.md)
+
+# SNN image compression with an enforced encoder / decoder split
 
 An image compression system built on **spiking neural networks** (`snnTorch`) plus
 **arithmetic coding** (`constriction`). A trained SNN **encoder** turns an image into a
