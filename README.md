@@ -1,4 +1,4 @@
-# SNN image compression with an enforced encoder / decoder split
+﻿# SNN image compression with an enforced encoder / decoder split
 
 An image compression system built on **spiking neural networks** (`snnTorch`) plus
 **arithmetic coding** (`constriction`). A trained SNN **encoder** turns an image into a
@@ -30,7 +30,7 @@ header carrying a **model hash** so a mismatched pair fails loudly instead of em
 garbage. See §6.4 and [`service/README.md`](service/README.md).
 
 **Status in one line:** the pipeline is correct and verified end to end (bit-exact round
-trips; ≈21 dB within four epochs of a ten-minute default run), but the *compression* is
+trips; 22.50 dB within five epochs of a ten-minute run), but the *compression* is
 not competitive — JPEG wins by a wide margin at these rates, and the project's headline
 research idea was rigorously falsified and is off by default (§7). Both facts are
 documented here deliberately.
@@ -55,10 +55,10 @@ documented here deliberately.
 
 **Does not work / does not exist yet**
 
-* **Quality.** The best honest numbers here are ≈21 dB — 21.13 dB at 2.845 bpp container
-  accounting (256 px, C=32, T=10), and ≈21 dB at 0.63 bpp analytic on the small default
-  geometry (128 px, C=24, T=6). JPEG is 10–15 dB better at a comparable byte count. This
-  is not a competitive codec.
+* **Quality.** The best honest numbers here are ≈22.5 dB — 22.50 dB after a 5-epoch
+  10-minute run at the 256 px reference geometry (`models/anchor_best.pth`), versus 21.13 dB
+  at 2.845 bpp container accounting for the previous best model. JPEG is still well ahead at
+  a comparable byte count. This is not a competitive codec.
 * **No rate–distortion sweep as a result.** `--lam` is a knob; nobody has published a
    proper BD-rate curve from it.
 * **The anchor / cross-image idea is dead.** Coding a group of similar images relative to
@@ -284,34 +284,52 @@ protocol next to a bitrate from the other; the tables below always name the prot
 
 ### 4.1 Short-run sanity baseline (not a result)
 
-`anchor_v9.log` is a live run of the default command with a 10-minute wall-clock budget
-(`--time-budget-min 10 --val-every 1`). The table is a **snapshot of the log, not a final
-model** — each epoch is validated for real (eval mode, hard quantization, BN running
-statistics, holdout images the model has never seen):
+`anchor_v9.log` is a run of the default (no-anchor) command at the **256 px reference
+geometry**, stopped by a 10-minute wall-clock budget after 5 epochs:
+
+```
+python anchor.py train --image-size 256 --latent-channels 32 --num-steps 10 \
+    --epochs 30 --time-budget-min 10 --val-every 1 --save-every 1 --out anchor_v9.pth
+```
+
+Each epoch is validated for real (eval mode, hard quantization, holdout images the model
+has never seen):
 
 | epoch | real-validation PSNR | analytic rate | sigma | time |
 |---|---|---|---|---|
-| 1 | 19.77 dB | 0.7559 bpp | 0.661 | 51.0 s |
-| 2 | 20.42 dB | 0.7159 bpp | 0.641 | 50.4 s |
-| 3 | 20.68 dB | 0.6741 bpp | 0.634 | 48.6 s |
-| 4 | **21.01 dB** ← best so far | 0.6283 bpp | 0.632 | 48.1 s |
-| 5 | 20.97 dB | 0.6357 bpp | 0.624 | 49.1 s |
-| 6 | 20.53 dB | 0.6129 bpp | 0.621 | 49.8 s |
+| 1 | 20.75 dB | 1.2685 bpp | 0.612 | 107.6 s |
+| 2 | 21.75 dB | 1.2540 bpp | 0.606 | 106.2 s |
+| 3 | 22.06 dB | 1.1679 bpp | 0.598 | 105.9 s |
+| 4 | 22.16 dB | 1.1264 bpp | 0.595 | 106.2 s |
+| 5 | **22.50 dB** ← best | 1.0670 bpp | 0.590 | 105.9 s |
 
 ```
-ep   4/30 | L 0.0154 | D 0.0006 | 独立码率 0.6283 bpp | sigma 0.632 | 噪声 0.88 | 48.1s
-         | y_std 0.86 y_max 9 | ★真实验证 21.01dB
+ep   5/30 | L 0.0174 | D 0.0004 | 独立码率 1.0670 bpp | sigma 0.590 | 噪声 0.83 | 105.9s
+         | y_std 0.65 y_max 5 | ★真实验证 22.50dB
 ```
 
-Read this as *"the loss is wired up correctly and a ten-minute run already lands near
-21 dB"* — a smoke-test baseline. **It is not a final result:** a handful of epochs of the
-smallest default configuration, at 128 px rather than the 256 px reference geometry, and
-the rate is the analytic estimate from the entropy model, not the container rate that a
-deployed pair actually transmits. An earlier launch of the same command reported 19.99 dB
-at 0.7671 bpp for epoch 1.
+Read this as *"the loss is wired up correctly and five epochs already beat the previous
+best"* — a smoke-test baseline, **not a final result**. The checkpoint is committed at
+`models/anchor_best.pth` (copied from `anchor_v9_best.pth`).
 
-Do **not** line this up against the 21.13 dB in the next table: different resolution,
-different latent geometry, different rate protocol.
+What makes this number mean something is the **latent scale**: `y_std 0.65`, `y_max 5`.
+Before the entropy-model fixes a comparable run drifted to `y_std ~130`, `y_max ~970` while
+the learned prior stayed frozen — the model was optimizing against a rate term it could not
+actually influence.
+
+Two caveats:
+
+- The **rate column is the analytic estimate** from the entropy model, not the container
+  rate a deployed pair transmits. It is not directly comparable with the container numbers
+  in §4.2.
+- An earlier launch of the same command that omitted the explicit geometry flags silently
+  used the argparse defaults (`--image-size 128 --latent-channels 24 --num-steps 6`) and
+  reported 19.77 dB at 0.7559 bpp by epoch 4. Those figures are a **different geometry** and
+  must not be compared with the table above. Always pass the geometry flags explicitly.
+
+The **PSNR column is trustworthy and comparable** with §4.2, because it is measured the same
+way (eval mode, hard quantization, unseen images): **22.50 dB already exceeds the 21.13 dB**
+of the previous best model — at a substantially lower rate.
 
 ### 4.2 Reference point: the previous best model
 
@@ -551,8 +569,11 @@ Full evidence: [`anchor_bytes_report.md`](anchor_bytes_report.md),
 
 ## 8. Limitations
 
-* **Rate–distortion is poor.** Best honest results: **21.13 dB @ 2.845 bpp** container
-  accounting at 256 px, and ≈21 dB at 0.63 bpp (analytic) on the small default geometry.
+* **Rate–distortion is poor.** Best honest result: **22.50 dB real-validation after a
+  5-epoch 10-minute run** at the 256 px reference geometry (`models/anchor_best.pth`). The
+  previous best model reached 21.13 dB @ 2.845 bpp container accounting. JPEG remains well
+  ahead at a comparable byte count, and a full BD-rate sweep against it has still not been
+  published.
   JPEG beats comparable-byte-count results by 10–15 dB; nothing here is a state-of-the-art
   claim.
 * **Small-scale evaluation.** Byte-level conclusions rest on 42–48 images in 6–8 groups,
