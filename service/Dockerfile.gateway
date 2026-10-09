@@ -1,0 +1,29 @@
+# =============================================================================
+# Gateway：唯一对外入口（不持有任何模型）
+#   docker build -f service/Dockerfile.gateway -t snn-ab-gateway .
+# =============================================================================
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Gateway 不需要 torch：PSNR/SSIM 用 numpy 自己实现，前处理用 pillow + numpy
+# （torchvision 在这里只是为了 transforms，换成 pillow 直接 resize/crop，省 ~2 GB 镜像）
+RUN pip install --no-cache-dir \
+        "numpy<2.3" pillow fastapi "uvicorn[standard]" python-multipart httpx
+
+COPY gateway/ ./gateway/
+
+ENV RUNS_DIR=/app/runs \
+    STATIC_DIR=/app/gateway/static \
+    A_URL=http://a-encoder:8000 \
+    B_URL=http://b-decoder:8000 \
+    UPSTREAM_TIMEOUT=120
+
+WORKDIR /app/gateway
+EXPOSE 8000
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

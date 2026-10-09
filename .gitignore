@@ -1,0 +1,73 @@
+# =============================================================================
+# 训练产物 / 数据集
+# 数据集约 15 GB（Flowers102 + DIV2K/Flickr2K），权重每个约 5 MB，都不入库。
+# 仓库只收录代码、文档、报告；一个最优权重以 Git LFS 之外的方式单独提供。
+# =============================================================================
+data/
+data/div2k/
+data/div2k_extracted/
+*.zip
+*.tgz
+*.mat
+
+# 权重与检查点
+*.pth
+*.pt
+!models/anchor_best.pth
+
+# 训练日志与运行记录
+*.log
+runs/
+_backup_epoch10/
+*_done.txt
+
+# 重建图 / 曲线图 / 一次性可视化产物
+recon_cifar/
+recon.png
+recon_x*.png
+key_bits.png
+input32.png
+loss_curve.png
+*_hist.png
+*_progressive.png
+*_sigma.png
+*_curve.png
+effect_*.png
+wiring_compare.png
+training_curves.png
+compare_snn_vs_jpeg.png
+
+# 压缩/还原产物
+key.pt
+key_*.pt
+
+# 服务镜像里各自的一半模型（由 codec.model_io 生成）
+models/a/
+models/b/
+
+# 临时验证脚本的产物
+_ab_*.json
+_ab_*.txt
+_fals_*.json
+_fals_*.txt
+_probe_*.json
+_smoke_*.pth
+_verify_*.json
+anchor_*_sz*.json
+anchor_*_sz*.txt
+anchor_allpairs.json
+anchor_eval.json
+
+# 备份/损坏文件
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+{
+  "n_groups": 6,
+  "group_size": 8,
+  "independent_bytes": 2788928.0,
+  "anchor_bytes": 2811360.0,
+  "anchor_only": 348960.0,
+  "residual_total": 2462400.0,
+  "saving_pct": -0.8043233816003914
+}

@@ -1,0 +1,18 @@
+# =============================================================================
+# 仅用于测试的 override：把 A/B 的端口临时发布到宿主机，好让
+# service/_e2e_test.py 能像宿主机直测那样"直接打 A 机 / B 机"。
+#
+#   docker compose -f service/docker-compose.yml -f service/docker-compose.test.yml up -d
+#   python service/_e2e_test.py --a-url http://127.0.0.1:8001 --b-url http://127.0.0.1:8002 --gw-url http://127.0.0.1:8080
+#   docker compose -f service/docker-compose.yml -f service/docker-compose.test.yml down
+#
+# 正式部署**不要**用这个文件：A/B 不发布端口，只能通过 backend 网络被 gateway 访问。
+# =============================================================================
+services:
+  a-encoder:
+    ports:
+      - "8001:8000"
+
+  b-decoder:
+    ports:
+      - "8002:8000"

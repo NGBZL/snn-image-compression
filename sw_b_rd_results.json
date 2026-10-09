@@ -1,0 +1,34 @@
+[
+  {
+    "bpp": NaN,
+    "psnr": NaN,
+    "jpeg_bytes": NaN,
+    "jpeg_psnr": NaN,
+    "n": 0,
+    "lam": 0.01
+  },
+  {
+    "bpp": NaN,
+    "psnr": NaN,
+    "jpeg_bytes": NaN,
+    "jpeg_psnr": NaN,
+    "n": 0,
+    "lam": 0.1
+  },
+  {
+    "bpp": NaN,
+    "psnr": NaN,
+    "jpeg_bytes": NaN,
+    "jpeg_psnr": NaN,
+    "n": 0,
+    "lam": 1.0
+  },
+  {
+    "bpp": NaN,
+    "psnr": NaN,
+    "jpeg_bytes": NaN,
+    "jpeg_psnr": NaN,
+    "n": 0,
+    "lam": 10.0
+  }
+]

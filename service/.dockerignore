@@ -1,0 +1,28 @@
+﻿# =============================================================================
+# 构建上下文 = snn_ab 根目录（-f service/Dockerfile.x 时 Docker 在 Dockerfile
+# 同级目录找 .dockerignore，所以这份放在 service/ 下）
+# 只放行三个服务真正 COPY 的东西，其余（权重/日志/图片/运行记录）全部挡掉。
+#
+# 注意：不能写 `models/`，否则 `COPY models/manifest.json` 会失败
+# （被忽略的目录不能被 COPY 穿透）。精确写成 `models/a` 和 `models/b`。
+# =============================================================================
+**/__pycache__
+**/*.pyc
+*.log
+*.pth
+*.bak
+*.png
+*.tgz
+*.mat
+*.zip
+.git
+.gitignore
+.venv
+venv
+env
+runs/
+data/
+recon_cifar/
+_backup_epoch10/
+models/a/
+models/b/

@@ -1,0 +1,30 @@
+# =============================================================================
+# Docker 构建上下文 = snn_ab 根目录（服务要 COPY codec/ sae_rd.py anchor.py）
+# 这里把训练产物、权重、日志、运行记录都挡在外面，避免几 GB 的上下文上传。
+#
+# 注意：**不要**写 `models/`，那会把 `COPY models/manifest.json` 一起挡掉
+# （BuildKit 报 "failed to calculate checksum ... /models/manifest.json: not found"）。
+# manifest.json 是元数据（指纹 + 超参），要拷进 A/B 镜像，所以只排除权重目录。
+# =============================================================================
+**/__pycache__
+**/*.pyc
+*.pyc
+*.log
+*.pth
+*.bak
+*.png
+*.tgz
+*.mat
+*.zip
+*.pt
+.git
+.gitignore
+.venv
+venv
+env
+runs/
+data/
+recon_cifar/
+_backup_epoch10/
+models/a/
+models/b/

@@ -1,0 +1,131 @@
+# =============================================================================
+# SNN 图像压缩 A/B 机分离 —— 本地 Docker 模拟双机
+#
+#   docker compose -f service/docker-compose.yml build
+#   docker compose -f service/docker-compose.yml up -d
+#   → 浏览器打开 http://localhost:8080
+#
+# 网络模型
+#   frontend（普通 bridge）：只有 gateway 接进来，宿主机才能访问 8080
+#   backend （internal:true）：a-encoder / b-decoder / gateway 三个都在里面；
+#                              internal 网络没有对外网关，A、B 不能主动连外网，
+#                              A 也连不到 B（它们只暴露给同网络的 gateway）。
+#
+# 隔离模型（本项目的核心）
+#   a-encoder 只挂 ./models/a -> /models（只读），看不到 decoder.pth
+#   b-decoder 只挂 ./models/b -> /models（只读），看不到 encoder.pth
+#   manifest.json 单独以单文件方式挂进 A（A 需要里面的 model_hash 写进钥匙头）
+# =============================================================================
+name: snn-ab
+
+services:
+  # ---------------------------------------------------------------- A 机：边缘端编码器
+  a-encoder:
+    build:
+      # 关键：构建上下文是整个 snn_ab 根目录，服务要 import codec / sae_rd / anchor
+      context: ..
+      dockerfile: service/Dockerfile.a
+    image: snn-ab-a:local
+    container_name: snn-ab-a
+    restart: unless-stopped
+    environment:
+      MODELS_DIR: /models
+      ENC_CKPT: /models/encoder.pth
+      MANIFEST_PATH: /app/manifest.json
+      DEVICE: cpu
+    volumes:
+      # 只挂 A 半区；容器里 ls /models 只能看到 encoder.pth
+      # （manifest.json 在构建时 COPY 进 /app/manifest.json，见 Dockerfile.a 注释：
+      #   /models 是只读挂载点，没法在里面挂单文件）
+      - ../models/a:/models:ro
+    # 模拟边缘端：限 2 核、不给 GPU
+    cpus: "2"
+    mem_limit: 2g
+    networks:
+      - backend
+    healthcheck:
+      # 注意：这里不只看 HTTP 200，还要看到 "loaded": true。
+      # 服务是懒报错的（模型加载失败也会起 HTTP，方便看 /health 里的 load_error），
+      # 只查 200 会把"起来了但模型没加载"误判成健康 —— 这个坑踩过。
+      test: ["CMD", "python", "-c",
+             "import json,urllib.request;d=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5));assert d['loaded'] and d['ok'], d"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # ---------------------------------------------------------------- B 机：云侧解码器
+  b-decoder:
+    build:
+      context: ..
+      dockerfile: service/Dockerfile.b
+    image: snn-ab-b:local
+    container_name: snn-ab-b
+    restart: unless-stopped
+    environment:
+      MODELS_DIR: /models
+      DEC_CKPT: /models/decoder.pth
+      MANIFEST_PATH: /app/manifest.json
+      DEVICE: cpu
+    volumes:
+      # 只挂 B 半区；容器里 ls /models 只能看到 decoder.pth
+      - ../models/b:/models:ro
+    # 真实部署时 B 机在云端、有 GPU，把上面 environment 的 DEVICE 改成 cuda，
+    # 并把 image 换成带 CUDA 的 torch，再加下面这段（Compose 本地模拟时不加，
+    # 因为并没有真 GPU 可以分配）：
+    #
+    #   deploy:
+    #     resources:
+    #       reservations:
+    #         devices:
+    #           - driver: nvidia
+    #             count: 1
+    #             capabilities: [gpu]
+    #
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import json,urllib.request;d=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5));assert d['loaded'] and d['ok'], d"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # ---------------------------------------------------------------- Gateway：唯一对外入口
+  gateway:
+    build:
+      context: ..
+      dockerfile: service/Dockerfile.gateway
+    image: snn-ab-gateway:local
+    container_name: snn-ab-gateway
+    restart: unless-stopped
+    depends_on:
+      - a-encoder
+      - b-decoder
+    environment:
+      A_URL: http://a-encoder:8000
+      B_URL: http://b-decoder:8000
+      RUNS_DIR: /app/runs
+      UPSTREAM_TIMEOUT: "120"
+    volumes:
+      - ../runs:/app/runs
+    ports:
+      - "8080:8000"
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true

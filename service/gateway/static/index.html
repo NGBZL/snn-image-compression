@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SNN 图像压缩 A/B 机分离演示</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --fg:#e8eaf0; --muted:#9aa3b2; --accent:#4c8dff; --accent2:#37d6a0;
+    --warn:#ffb454; --err:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  header{padding:18px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{margin:0;font-size:18px;font-weight:600}
+  header .sub{color:var(--muted);font-size:12px;margin-top:2px}
+  .wrap{max-width:1120px;margin:0 auto;padding:20px 24px 60px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+        padding:18px;margin-bottom:18px}
+  .card h2{margin:0 0 14px;font-size:14px;font-weight:600;color:var(--fg)}
+  .row{display:flex;gap:18px;flex-wrap:wrap}
+  .col{flex:1 1 320px;min-width:280px}
+  #drop{border:2px dashed var(--line);border-radius:10px;padding:26px;text-align:center;
+        color:var(--muted);cursor:pointer;transition:.15s;background:var(--panel2)}
+  #drop.hot{border-color:var(--accent);color:var(--fg);background:#1b2740}
+  #drop b{color:var(--fg)}
+  #preview{max-width:100%;max-height:200px;border-radius:8px;margin-top:12px;display:none}
+  label.sl{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+  label.sl .val{color:var(--accent);font-variant-numeric:tabular-nums;font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;
+         padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-top:14px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);
+               font-weight:400;width:auto;padding:6px 12px;margin:0;font-size:12px}
+  .imgs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .imgs figure{margin:0}
+  .imgs img{width:100%;image-rendering:pixelated;border-radius:8px;
+            border:1px solid var(--line);background:#000;display:block}
+  .imgs figcaption{text-align:center;color:var(--muted);font-size:12px;margin-top:6px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:16px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .stat .k{color:var(--muted);font-size:11px}
+  .stat .v{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--accent2)}
+  .stat .v.blue{color:var(--accent)}
+  details{margin-top:16px;background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+  summary{padding:10px 14px;cursor:pointer;font-size:13px;color:var(--muted)}
+  details pre{margin:0;padding:0 14px 14px;font:12px/1.5 ui-monospace,Consolas,monospace;
+              color:#b9c4d6;white-space:pre-wrap;word-break:break-all;max-height:220px;overflow:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);
+        font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:500;font-size:12px}
+  tbody tr:hover{background:var(--panel2)}
+  .msg{padding:10px 12px;border-radius:8px;font-size:13px;margin-top:14px;display:none}
+  .msg.err{display:block;background:#3a1d1d;border:1px solid #6b2b2b;color:#ffb3b3}
+  .msg.info{display:block;background:#1d2a3a;border:1px solid #2b4a6b;color:#b3d4ff}
+  .muted{color:var(--muted)}
+  .badge{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;
+         background:#243044;color:#9dc0ff;margin-left:6px}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid #ffffff44;
+        border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;
+        vertical-align:-2px;margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>SNN 图像压缩 · A/B 机分离演示</h1>
+  <div class="sub">A 机 = 边缘端编码器（只有 encoder 半区） · B 机 = 云侧解码器（只有 decoder 半区） · 质量指标在 Gateway 计算</div>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <h2>1. 选图 &amp; 设码率</h2>
+    <div class="row">
+      <div class="col">
+        <div id="drop">
+          <div>拖拽图片到这里，或<b>点击选择文件</b></div>
+          <div class="hint">支持 PNG / JPG / WebP / BMP，会统一处理成 256×256</div>
+          <img id="preview" alt="预览">
+        </div>
+        <input id="file" type="file" accept="image/*" style="display:none">
+      </div>
+      <div class="col">
+        <label class="sl"><span>目标钥匙大小</span><span class="val"><span id="kbVal">5</span> kB</span></label>
+        <input id="kb" type="range" min="1" max="20" step="0.5" value="5">
+        <div class="hint">
+          滑块只影响 A 机的推理旋钮 (steps, channels)；A 机在候选格子里最多试探 4 组，
+          取钥匙字节数最接近目标的那个。不选图时无法预览结果。
+        </div>
+        <button id="go" disabled>编码并还原</button>
+        <div id="msg" class="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <h2>2. 结果 <span class="badge" id="runId"></span></h2>
+    <div class="imgs">
+      <figure>
+        <img id="origImg" alt="原图">
+        <figcaption>原图（Gateway 侧 256×256 前处理）</figcaption>
+      </figure>
+      <figure>
+        <img id="reconImg" alt="重建图">
+        <figcaption>B 机重建（只用钥匙字节）</figcaption>
+      </figure>
+    </div>
+    <div class="stats" id="stats"></div>
+    <details>
+      <summary>钥匙十六进制（前 256 字节，共 <span id="keyTotal">0</span> 字节）</summary>
+      <pre id="keyHex"></pre>
+    </details>
+    <details>
+      <summary>原始 JSON 返回</summary>
+      <pre id="rawJson"></pre>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>3. 历史记录（最近 50 条） <button class="ghost" id="refresh">刷新</button></h2>
+    <table>
+      <thead>
+        <tr><th>时间</th><th>文件</th><th>目标 kB</th><th>字节</th><th>bpp</th>
+            <th>steps×ch</th><th>PSNR</th><th>SSIM</th><th>编码 ms</th><th>解码 ms</th><th>查看</th></tr>
+      </thead>
+      <tbody id="hist"><tr><td colspan="11" class="muted">加载中…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const drop = $("drop"), fileInput = $("file"), preview = $("preview");
+  const kb = $("kb"), kbVal = $("kbVal"), go = $("go"), msg = $("msg");
+  let picked = null;
+
+  function setMsg(text, kind){
+    if(!text){ msg.className = "msg"; msg.textContent = ""; return; }
+    msg.className = "msg " + (kind || "info");
+    msg.innerHTML = text;
+  }
+
+  function useFile(f){
+    if(!f) return;
+    if(!/^image\//.test(f.type) && !/\.(png|jpe?g|webp|bmp|gif)$/i.test(f.name)){
+      setMsg("请选择图片文件（PNG / JPG / WebP / BMP）", "err"); return;
+    }
+    picked = f;
+    const url = URL.createObjectURL(f);
+    preview.onload = () => URL.revokeObjectURL(url);
+    preview.src = url;
+    preview.style.display = "block";
+    go.disabled = false;
+    setMsg("已选择：<b>" + f.name + "</b>（" + (f.size/1024).toFixed(1) + " kB）", "info");
+  }
+
+  drop.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", e => useFile(e.target.files[0]));
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); drop.classList.add("hot");
+  }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); drop.classList.remove("hot");
+  }));
+  drop.addEventListener("drop", e => {
+    const dt = e.dataTransfer;
+    if(dt && dt.files && dt.files.length) useFile(dt.files[0]);
+  });
+  // 允许整页拖入
+  window.addEventListener("dragover", e => e.preventDefault());
+  window.addEventListener("drop", e => {
+    e.preventDefault();
+    if(e.dataTransfer && e.dataTransfer.files.length) useFile(e.dataTransfer.files[0]);
+  });
+
+  kb.addEventListener("input", () => kbVal.textContent = kb.value);
+
+  function fmtBytes(n){ return n >= 1024 ? (n/1024).toFixed(2) + " kB" : n + " B"; }
+
+  function stat(k, v, cls){
+    return '<div class="stat"><div class="k">' + k + '</div><div class="v ' +
+           (cls||"") + '">' + v + '</div></div>';
+  }
+
+  async function run(){
+    if(!picked){ setMsg("请先选择一张图", "err"); return; }
+    go.disabled = true;
+    const oldLabel = go.textContent;
+    go.innerHTML = '<span class="spin"></span>编码 → 传输 → 还原 中…';
+    setMsg("正在调用 A 机 /encode，再把钥匙交给 B 机 /decode…", "info");
+    const fd = new FormData();
+    fd.append("image", picked, picked.name);
+    fd.append("target_kb", kb.value);
+    const t0 = performance.now();
+    try{
+      const r = await fetch("/api/run", { method:"POST", body: fd });
+      const text = await r.text();
+      if(!r.ok){
+        let d = text;
+        try{ d = JSON.parse(text).detail || text; }catch(e){}
+        throw new Error("HTTP " + r.status + " — " + d);
+      }
+      const j = JSON.parse(text);
+      const wall = ((performance.now() - t0)/1000).toFixed(1);
+      render(j, wall);
+      setMsg("完成：钥匙 " + fmtBytes(j.key_bytes) + "，PSNR " + j.psnr +
+             " dB，往返 " + wall + " s", "info");
+      loadHistory();
+    }catch(err){
+      setMsg("失败：" + err.message, "err");
+    }finally{
+      go.disabled = false;
+      go.textContent = oldLabel;
+    }
+  }
+
+  function render(j, wall){
+    $("resultCard").style.display = "block";
+    $("runId").textContent = j.run_id;
+    $("origImg").src = j.orig_url + "?t=" + Date.now();
+    $("reconImg").src = j.recon_url + "?t=" + Date.now();
+    $("stats").innerHTML =
+        stat("钥匙字节数", j.key_bytes + " B")
+      + stat("bpp", j.bpp, "blue")
+      + stat("PSNR", j.psnr + " dB")
+      + stat("SSIM", j.ssim)
+      + stat("编码耗时", j.encode_ms + " ms", "blue")
+      + stat("解码耗时", j.decode_ms + " ms", "blue")
+      + stat("steps × channels", j.steps_used + " × " + j.channels_used)
+      + stat("模型指纹", '<span style="font-size:12px">' + (j.model_hash || "—") + "</span>")
+      + stat("往返总耗时", wall + " s");
+    $("rawJson").textContent = JSON.stringify(j, null, 2);
+    // 钥匙十六进制：从 key.bin 拉前 256 字节
+    $("keyTotal").textContent = j.key_bytes;
+    $("keyHex").textContent = "加载中…";
+    fetch(j.orig_url.replace("orig.png", "key.bin"))
+      .then(r => r.arrayBuffer())
+      .then(buf => {
+        const u8 = new Uint8Array(buf).slice(0, 256);
+        let out = "";
+        for(let i = 0; i < u8.length; i++){
+          out += u8[i].toString(16).padStart(2, "0");
+          out += ((i + 1) % 16 === 0) ? "\n" : " ";
+        }
+        $("keyHex").textContent = out + (buf.byteLength > 256
+            ? "\n… 仅显示前 256 字节（共 " + buf.byteLength + " 字节）" : "");
+      })
+      .catch(e => $("keyHex").textContent = "读取失败：" + e.message);
+  }
+
+  async function loadHistory(){
+    const tb = $("hist");
+    try{
+      const r = await fetch("/api/history?limit=50");
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const rows = await r.json();
+      if(!rows.length){
+        tb.innerHTML = '<tr><td colspan="11" class="muted">还没有记录</td></tr>';
+        return;
+      }
+      tb.innerHTML = rows.map(x => {
+        const ts = (x.ts || "").replace("T", " ").slice(5);
+        return "<tr>"
+          + "<td>" + ts + "</td>"
+          + "<td>" + (x.filename || "-").slice(0, 18) + "</td>"
+          + "<td>" + (x.target_kb == null ? "—" : x.target_kb) + "</td>"
+          + "<td>" + x.key_bytes + "</td>"
+          + "<td>" + x.bpp + "</td>"
+          + "<td>" + x.steps_used + "×" + x.channels_used + "</td>"
+          + "<td>" + x.psnr + "</td>"
+          + "<td>" + x.ssim + "</td>"
+          + "<td>" + x.encode_ms + "</td>"
+          + "<td>" + x.decode_ms + "</td>"
+          + '<td><a href="' + x.recon_url + '" target="_blank" style="color:var(--accent)">图</a></td>'
+          + "</tr>";
+      }).join("");
+    }catch(e){
+      tb.innerHTML = '<tr><td colspan="11" class="muted">历史加载失败：' + e.message + "</td></tr>";
+    }
+  }
+
+  go.addEventListener("click", run);
+  $("refresh").addEventListener("click", loadHistory);
+  loadHistory();
+  fetch("/health").then(r => r.json()).then(j => {
+    const okA = j.a && j.a.ok, okB = j.b && j.b.ok;
+    if(!okA || !okB){
+      setMsg("上游健康检查未通过：A=" + JSON.stringify(j.a) + " B=" + JSON.stringify(j.b), "err");
+    }
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>

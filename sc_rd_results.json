@@ -1,0 +1,32 @@
+[
+  {
+    "bpp": NaN,
+    "psnr": NaN,
+    "jpeg_bytes": NaN,
+    "jpeg_psnr": NaN,
+    "n": 0,
+    "lam": 0.01,
+    "real_bytes": 140.0,
+    "est_bytes": 138.07897186279297
+  },
+  {
+    "bpp": NaN,
+    "psnr": NaN,
+    "jpeg_bytes": NaN,
+    "jpeg_psnr": NaN,
+    "n": 0,
+    "lam": 0.1,
+    "real_bytes": 82.0,
+    "est_bytes": 80.82367324829102
+  },
+  {
+    "bpp": NaN,
+    "psnr": NaN,
+    "jpeg_bytes": NaN,
+    "jpeg_psnr": NaN,
+    "n": 0,
+    "lam": 1.0,
+    "real_bytes": 46.0,
+    "est_bytes": 43.0020694732666
+  }
+]

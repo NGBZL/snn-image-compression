@@ -1,0 +1,132 @@
+﻿# anchor_bytes summary
+
+Units: bytes per image for PROTO B (deployment container); 'A bits' = the
+anchor.py::evaluate protocol, which counts BITS and omits z.
+
+======================================================================================================================
+## anchor_v5_sz128  (weights=anchor_v5.pth, input 128x128, 6 groups x 8)
+role      n       y B      z B   hdr   total B   PSNR   y bits   z bits    z%  sym std  sym max  eff sig   eff max
+indep    42    4008.3   1527.9    36    5572.2  19.05    32066    12223 27.6%    64.98      831   0.2588  384338.6
+anchor    6    4083.3   1655.3    36    5774.7  18.69    32667    13243 28.8%    67.84      820   0.2639  384338.6
+resid    42    4390.0   1930.1    36    6356.1  18.65    35120    15441 30.5%    84.17      899   0.2680  384338.6
+            oracle (pooled hist) bits/img   fitted Gauss bits/img   model analytic bits/img
+indep                               27223                   27317                     39179
+anchor                              27192                   27558                     40091
+resid                               28677                   28633                     42056
+z:           real   model ana_z   fitted(pooled)   oracle(pooled)   z_prior.sigma   z std pooled
+indep       12223         15192             3407             2592                          0.998
+anchor      13243         16466             3797             2832                          1.137
+resid       15441         19202             4466             3393                          1.421
+  resid - indep = +784 B/img   (y +382 B = 49%, z +402 B = 51%)
+  sigma field (per-pixel, prior.sigma()*hyperprior): p1 0.1433 p10 0.1894 p50 0.2588 p90 0.73 p99 163107 max 384339   symbol std 64.98   9.4% of pixels above _SIGMA_GRID top (100)
+  SCHEME PROTO B  independent    268680 B   anchor+resid    301604 B   delta +12.25%
+  SCHEME PROTO A  independent    348684 B   anchor+resid    351528 B   delta +0.82%
+  SCHEME ORACLE   independent     27223 B   anchor+resid     28492 B   delta +4.66%   (empirical symbol entropy, side info free)
+  SIMPLE FIX (recalibrate the priors to the measured symbol scale, no side info):
+      indep total     5572 B  ->  y     3415 + z     426 + 36 =     3876 B   (-30.4%)
+======================================================================================================================
+## anchor_v5_sz256  (weights=anchor_v5.pth, input 256x256, 6 groups x 8)
+role      n       y B      z B   hdr   total B   PSNR   y bits   z bits    z%  sym std  sym max  eff sig   eff max
+indep    42   15988.0   7281.5    36   23305.5  21.13   127904    58252 31.3%    66.66      879   0.2659  384338.6
+anchor    6   16420.7   7602.7    36   24059.3  20.76   131365    60821 31.6%    69.39      894   0.2726  384338.6
+resid    42   17875.2   8828.2    36   26739.4  20.73   143002    70626 33.1%    87.16      947   0.2751  384338.6
+            oracle (pooled hist) bits/img   fitted Gauss bits/img   model analytic bits/img
+indep                              108668                  109047                    165691
+anchor                             110724                  110731                    168930
+resid                              117551                  117303                    178255
+z:           real   model ana_z   fitted(pooled)   oracle(pooled)   z_prior.sigma   z std pooled
+indep       58252         72489            16440            12517                          1.285
+anchor      60821         75707            17697            13252                          1.427
+resid       70626         87899            20677            15771                          1.827
+  resid - indep = +3434 B/img   (y +1887 B = 55%, z +1547 B = 45%)
+  sigma field (per-pixel, prior.sigma()*hyperprior): p1 0.1369 p10 0.1884 p50 0.2659 p90 0.77 p99 275413 max 384339   symbol std 66.66   9.4% of pixels above _SIGMA_GRID top (100)
+  SCHEME PROTO B  independent   1123188 B   anchor+resid   1267412 B   delta +12.84%
+  SCHEME PROTO A  independent   1392752 B   anchor+resid   1413260 B   delta +1.47%
+  SCHEME ORACLE   independent    108668 B   anchor+resid    116698 B   delta +7.39%   (empirical symbol entropy, side info free)
+  SIMPLE FIX (recalibrate the priors to the measured symbol scale, no side info):
+      indep total    23306 B  ->  y    13631 + z    2055 + 36 =    15722 B   (-32.5%)
+======================================================================================================================
+## anchor_v7_sz128  (weights=anchor_v7.pth, input 128x128, 6 groups x 8)
+role      n       y B      z B   hdr   total B   PSNR   y bits   z bits    z%  sym std  sym max  eff sig   eff max
+indep    42   10318.6    224.7    36   10579.2  14.14    82549     1797  2.1%     5.79      285   0.0203     272.1
+anchor    6   10332.7    242.0    36   10610.7  13.51    82661     1936  2.3%     5.88      330   0.0205     449.6
+resid    42    5756.8    147.6    36    5940.4  18.07    46054     1181  2.5%    71.32      774   0.0283    1750.4
+            oracle (pooled hist) bits/img   fitted Gauss bits/img   model analytic bits/img
+indep                               13200                   15039                     99776
+anchor                              12791                   14706                     99961
+resid                               22022                   22000                     49002
+z:           real   model ana_z   fitted(pooled)   oracle(pooled)   z_prior.sigma   z std pooled
+indep        1797          2046              726              627                          0.242
+anchor       1936          2213              748              656                          0.249
+resid        1181          1315              793              686                          0.256
+  resid - indep = -4639 B/img   (y -4562 B = 98%, z -77 B = 2%)
+  sigma field (per-pixel, prior.sigma()*hyperprior): p1 0.0002 p10 0.0057 p50 0.0203 p90 0.07 p99 62 max 272   symbol std 5.79   0.3% of pixels above _SIGMA_GRID top (100)
+  SCHEME PROTO B  independent    507992 B   anchor+resid    313160 B   delta -38.35%
+  SCHEME PROTO A  independent    217880 B   anchor+resid    301476 B   delta +38.37%
+  SCHEME ORACLE   independent     13200 B   anchor+resid     20868 B   delta +58.09%   (empirical symbol entropy, side info free)
+  SIMPLE FIX (recalibrate the priors to the measured symbol scale, no side info):
+      indep total    10579 B  ->  y     1880 + z      91 + 36 =     2007 B   (-81.0%)
+======================================================================================================================
+## anchor_v7_sz256  (weights=anchor_v7.pth, input 256x256, 6 groups x 8)
+role      n       y B      z B   hdr   total B   PSNR   y bits   z bits    z%  sym std  sym max  eff sig   eff max
+indep    42   42479.8   1045.5    36   43561.3  15.15   339838     8364  2.4%     7.25      444   0.0205     653.2
+anchor    6   42250.0   1171.3    36   43457.3  14.46   338000     9371  2.7%     6.46      414   0.0206     374.6
+resid    42   24636.5    612.1    36   25284.6  20.11   197092     4897  2.4%    72.99      818   0.0292    2862.3
+            oracle (pooled hist) bits/img   fitted Gauss bits/img   model analytic bits/img
+indep                               53508                   62839                    411345
+anchor                              51919                   60344                    409343
+resid                               89210                   89296                    210363
+z:           real   model ana_z   fitted(pooled)   oracle(pooled)   z_prior.sigma   z std pooled
+indep        8364          9597             3111             2772                          0.256
+anchor       9371         10876             3211             2886                          0.264
+resid        4897          5442             3221             2809                          0.260
+  resid - indep = -18277 B/img   (y -17843 B = 98%, z -433 B = 2%)
+  sigma field (per-pixel, prior.sigma()*hyperprior): p1 0.0001 p10 0.0050 p50 0.0205 p90 0.07 p99 56 max 653   symbol std 7.25   0.3% of pixels above _SIGMA_GRID top (100)
+  SCHEME PROTO B  independent   2090320 B   anchor+resid   1322696 B   delta -36.72%
+  SCHEME PROTO A  independent    867428 B   anchor+resid   1212580 B   delta +39.79%
+  SCHEME ORACLE   independent     53508 B   anchor+resid     84549 B   delta +58.01%   (empirical symbol entropy, side info free)
+  SIMPLE FIX (recalibrate the priors to the measured symbol scale, no side info):
+      indep total    43561 B  ->  y     7855 + z     389 + 36 =     8280 B   (-81.0%)
+======================================================================================================================
+## normab_gn_best_sz128  (weights=normab_gn_best.pth, input 128x128, 6 groups x 8)
+role      n       y B      z B   hdr   total B   PSNR   y bits   z bits    z%  sym std  sym max  eff sig   eff max
+indep    42    2877.2    244.8    36    3158.0  15.74    23018     1958  7.8%   103.13      869   0.1050     819.2
+anchor    6    2896.7    246.0    36    3178.7  14.66    23173     1968  7.8%   101.00      842   0.1082     620.1
+resid    42    3363.2    261.6    36    3660.9  14.92    26906     2093  7.2%   114.05      924   0.0982    1535.9
+            oracle (pooled hist) bits/img   fitted Gauss bits/img   model analytic bits/img
+indep                               13737                   13830                     19465
+anchor                              13342                   13754                     20391
+resid                               15790                   16942                     21979
+z:           real   model ana_z   fitted(pooled)   oracle(pooled)   z_prior.sigma   z std pooled
+indep        1958          2179             1966              688                          1.713
+anchor       1968          2197             1972              729                          1.657
+resid        2093          2314             2258             1130                          1.766
+  resid - indep = +503 B/img   (y +486 B = 97%, z +17 B = 3%)
+  sigma field (per-pixel, prior.sigma()*hyperprior): p1 0.0599 p10 0.0758 p50 0.1050 p90 0.17 p99 344 max 819   symbol std 103.13   4.6% of pixels above _SIGMA_GRID top (100)
+  SCHEME PROTO B  independent    151708 B   anchor+resid    172828 B   delta +13.92%
+  SCHEME PROTO A  independent    225304 B   anchor+resid    230976 B   delta +2.52%
+  SCHEME ORACLE   independent     13737 B   anchor+resid     15484 B   delta +12.71%   (empirical symbol entropy, side info free)
+  SIMPLE FIX (recalibrate the priors to the measured symbol scale, no side info):
+      indep total     3158 B  ->  y     1729 + z     246 + 36 =     2010 B   (-36.3%)
+======================================================================================================================
+## normab_gn_best_sz256  (weights=normab_gn_best.pth, input 256x256, 6 groups x 8)
+role      n       y B      z B   hdr   total B   PSNR   y bits   z bits    z%  sym std  sym max  eff sig   eff max
+indep    42   11472.7    953.9    36   12462.6  16.83    91781     7631  7.7%   106.02      902   0.0945    1490.5
+anchor    6   11426.7    957.3    36   12420.0  15.58    91413     7659  7.7%   103.77      885   0.0973    1518.2
+resid    42   13540.1   1004.6    36   14580.7  15.72   108321     8037  6.9%   117.45      938   0.0860    2317.2
+            oracle (pooled hist) bits/img   fitted Gauss bits/img   model analytic bits/img
+indep                               55221                   55730                     73060
+anchor                              54603                   55304                     75161
+resid                               63098                   67884                     83335
+z:           real   model ana_z   fitted(pooled)   oracle(pooled)   z_prior.sigma   z std pooled
+indep        7631          8568             7736             2202                          1.847
+anchor       7659          8596             7728             2306                          1.806
+resid        8037          8969             8616             3655                          1.921
+  resid - indep = +2118 B/img   (y +2067 B = 98%, z +51 B = 2%)
+  sigma field (per-pixel, prior.sigma()*hyperprior): p1 0.0499 p10 0.0649 p50 0.0945 p90 0.17 p99 442 max 1490   symbol std 106.02   5.0% of pixels above _SIGMA_GRID top (100)
+  SCHEME PROTO B  independent    597948 B   anchor+resid    686908 B   delta +14.88%
+  SCHEME PROTO A  independent    900904 B   anchor+resid    920740 B   delta +2.20%
+  SCHEME ORACLE   independent     55221 B   anchor+resid     62036 B   delta +12.34%   (empirical symbol entropy, side info free)
+  SIMPLE FIX (recalibrate the priors to the measured symbol scale, no side info):
+      indep total    12463 B  ->  y     6966 + z     967 + 36 =     7969 B   (-36.1%)
+

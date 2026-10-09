@@ -1,0 +1,45 @@
+# =============================================================================
+# A 机：边缘端编码器（只有编码器半区）
+#   构建上下文必须是 snn_ab 根目录：服务要 import codec / sae_rd / anchor
+#     docker build -f service/Dockerfile.a -t snn-ab-a .
+# =============================================================================
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    OMP_NUM_THREADS=2
+
+WORKDIR /app
+
+# ---- 依赖：torch/torchvision 走 PyTorch 官方 CPU 源，其余走 PyPI ----
+# snntorch / constriction / pillow / fastapi / uvicorn 都是纯 Python 或带 wheel
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+        torch torchvision \
+ && pip install --no-cache-dir \
+        "numpy<2.3" snntorch constriction pillow fastapi "uvicorn[standard]" \
+        python-multipart httpx
+
+# ---- 代码：只拷 A 机需要的东西 ----
+# sae_model.py 是 anchor.py 的依赖（human_bytes 那个小工具），必须一起拷
+COPY codec/ ./codec/
+COPY sae_rd.py sae_model.py anchor.py ./
+COPY a_encoder/ ./a_encoder/
+# A 机要拿 manifest.json 里的 model_hash 写进钥匙头。它是**元数据**（指纹 + 超参），
+# 不含任何权重，所以拷进镜像不算泄露 B 机。
+# 不用 compose 的 `manifest.json:/models/manifest.json:ro` 单文件挂载 ——
+# /models 本身是只读挂载点，Docker 没法在里面创建挂载点文件（实测报
+# "make mountpoint ... read-only file system"）。
+COPY models/manifest.json ./manifest.json
+
+ENV MODELS_DIR=/models \
+    ENC_CKPT=/models/encoder.pth \
+    MANIFEST_PATH=/app/manifest.json \
+    DEVICE=cpu \
+    PYTHONPATH=/app
+
+WORKDIR /app/a_encoder
+EXPOSE 8000
+
+# 说明：这里**没有**任何 B 机（解码器）代码，也看不到 models/b
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

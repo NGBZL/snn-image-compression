@@ -1,0 +1,12 @@
+{
+  "source": "anchor_v5.pth",
+  "model_hash": "1a5f6470c5592f19",
+  "codec_id": 3,
+  "image_size": 256,
+  "latent_channels": 32,
+  "num_steps": 10,
+  "z_channels": 48,
+  "ref_wiring": "inp",
+  "encoder_params": 36,
+  "decoder_params": 36
+}
